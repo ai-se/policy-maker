@@ -19,12 +19,9 @@ FILE = "temp.csv"
 class Document(O):
   id = 0
 
-  def __init__(self, title=None, html=None, pdf=None):
-    O.__init__(self)
+  def __init__(self, **kwargs):
+    O.__init__(self, **kwargs)
     self.id = Document.id
-    self.title = title
-    self.html = html
-    self.pdf = pdf
     Document.id += 1
 
 
@@ -40,7 +37,7 @@ def download(url=START_URL, rec=0):
   docs = []
   for anchor, html, pdf in zip(anchors, htmls, pdfs):
     html_uri, pdf_uri = BASE_URL + html['href'], BASE_URL + pdf['href']
-    document = Document(anchor.text, html_uri, pdf_uri)
+    document = Document(title=anchor.text, html_uri=html_uri, pdf_uri=pdf_uri)
     docs.append(document)
     # save("files/html/%s.html" % document.id, html_uri)
     # save("files/pdf/%s.pdf" % document.id, pdf_uri)
@@ -69,7 +66,7 @@ def dump(file_name, documents):
     header = SEPERATOR.join(["ID", "Title", "HTML", "PDF"])
     f.write(header + "\n")
     for d in documents:
-      line = SEPERATOR.join([str(d.id), d.title, d.html, d.pdf]).encode('utf8')
+      line = SEPERATOR.join([str(d.id), d.title, d.html_uri, d.pdf_uri]).encode('utf8')
       f.write(line + "\n")
 
 
