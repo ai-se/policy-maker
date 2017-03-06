@@ -12,7 +12,7 @@ import re
 BASE_URL = "https://www.nsf.gov"
 PUB_URL = BASE_URL + "/publications/index.jsp"
 START_URL = PUB_URL + "?org=NSF&archived=false&pub_type=Program+Announcements+%26+Information&nsf_org=NSF&search1="
-SEPERATOR = "$|$"
+SEPARATOR = "$|$"
 FILE = "temp.csv"
 
 
@@ -63,10 +63,10 @@ def save(file_name, url):
 
 def dump(file_name, documents):
   with open(file_name, 'wb') as f:
-    header = SEPERATOR.join(["ID", "Title", "HTML", "PDF"])
+    header = SEPARATOR.join(["ID", "Title", "HTML", "PDF"])
     f.write(header + "\n")
     for d in documents:
-      line = SEPERATOR.join([str(d.id), d.title, d.html_uri, d.pdf_uri]).encode('utf8')
+      line = SEPARATOR.join([str(d.id), d.title, d.html_uri, d.pdf_uri]).encode('utf8')
       f.write(line + "\n")
 
 
