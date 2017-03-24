@@ -119,9 +119,10 @@ class Document(O):
       return pickle.load(f)
 
   def get_raw(self):
-    if self.content is not None:
-      return self.content
-    elif self.abstract is not None:
+    # if self.content is not None:
+    #   return self.content
+    # el
+    if self.abstract is not None:
       return self.abstract
     else:
       return self.title
