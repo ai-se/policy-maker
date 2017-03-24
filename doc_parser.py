@@ -20,6 +20,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import logging
 import pandas as pd
+from scipy.spatial.distance import pdist
+from scipy.cluster.hierarchy import linkage, dendrogram
 
 logging.getLogger('lda').setLevel(logging.ERROR)
 
@@ -120,10 +122,8 @@ class Document(O):
     if self.content is not None:
       return self.content
     elif self.abstract is not None:
-      print(2)
       return self.abstract
     else:
-      print(3)
       return self.title
 
 
@@ -255,6 +255,84 @@ def make_heatmap(arr, row_labels, column_labels, fig_name):
   plt.savefig(fig_name, bbox_inches='tight')
   plt.clf()
 
+# Settings for 10 rows and 5 columns
+settings_10_5 = O(
+    fig_size=(8, 8),
+    col_axes=[0.3,   # col dendo left
+              0.81,   # col dendo bottom
+              0.36,   # col dendo width
+              0.15],  # col dendo height
+    row_axes=[0.0,    # row dendo left
+              0.055,   # row dendo bottom
+              0.23,   # row dendo width
+              0.69],  # row dendo height
+    plot_axes=[0.10,  # hm left
+               0.05,  # hm bottom
+               0.7,   # hm width
+               0.7],  # hm height
+)
+
+# Settings for 10 rows and 4 columns
+settings_10_4 = O(
+    fig_size=(8, 8),
+    col_axes=[0.325,   # col dendo left
+              0.81,   # col dendo bottom
+              0.29,   # col dendo width
+              0.15],  # col dendo height
+    row_axes=[0.0,    # row dendo left
+              0.055,   # row dendo bottom
+              0.23,   # row dendo width
+              0.69],  # row dendo height
+    plot_axes=[0.05,  # hm left
+               0.05,  # hm bottom
+               0.7,   # hm width
+               0.7],  # hm height
+)
+
+
+settings_map = {
+    "iot": settings_10_4,
+    "sus_dev": settings_10_5
+}
+
+
+def make_dendo_heatmap(arr, row_labels, column_labels, figname, settings):
+  df = pd.DataFrame(arr, columns=column_labels, index=row_labels)
+  # Compute pairwise distances for columns
+  col_clusters = linkage(pdist(df.T, metric='euclidean'), method='complete')
+  # plot column dendrogram
+  fig = plt.figure(figsize=settings.fig_size)
+  axd2 = fig.add_axes(settings.col_axes)
+  col_dendr = dendrogram(col_clusters, orientation='top',
+                         color_threshold=np.inf)  # makes dendrogram black)
+  axd2.set_xticks([])
+  axd2.set_yticks([])
+  # plot row dendrogram
+  axd1 = fig.add_axes(settings.row_axes)
+  row_clusters = linkage(pdist(df, metric='euclidean'), method='complete')
+  row_dendr = dendrogram(row_clusters, orientation='left',
+                         count_sort='ascending',
+                         color_threshold=np.inf)  # makes dendrogram black
+  axd1.set_xticks([])
+  axd1.set_yticks([])
+  # remove axes spines from dendrogram
+  for i, j in zip(axd1.spines.values(), axd2.spines.values()):
+    i.set_visible(False)
+    j.set_visible(False)
+  # reorder columns and rows with respect to the clustering
+  df_rowclust = df.ix[row_dendr['leaves'][::-1]]
+  df_rowclust.columns = [df_rowclust.columns[col_dendr['leaves']]]
+  # plot heatmap
+  axm = fig.add_axes(settings.plot_axes)
+  cax = axm.matshow(df_rowclust, interpolation='nearest', cmap='hot_r')
+  fig.colorbar(cax)
+  axm.set_xticks(np.arange(len(list(df_rowclust.columns))))
+  axm.set_xticklabels(list(df_rowclust.columns), rotation="vertical")
+  axm.set_yticks(np.arange(len(list(df_rowclust.index))))
+  axm.set_yticklabels(list(df_rowclust.index))
+  plt.savefig(figname, bbox_inches='tight')
+  plt.clf()
+
 
 def diversity(documents, fig_name):
   graph = Graph(documents)
@@ -277,7 +355,11 @@ def diversity(documents, fig_name):
     tot = sum(heatmap_map[agency])
     dist = [top / tot for top in heatmap_map[agency]]
     heatmap_arr.append(dist)
-  make_heatmap(np.transpose(heatmap_arr), row_labels, column_labels, fig_name)
+  hm_name = 'files/results/figs/%s_diversity.png' % fig_name
+  make_heatmap(np.transpose(heatmap_arr), row_labels, column_labels, hm_name)
+  dendo_hm_name = 'files/results/figs/%s_dendo.png' % fig_name
+  make_dendo_heatmap(np.transpose(heatmap_arr), row_labels, column_labels,
+                     dendo_hm_name, settings_map[fig_name])
 
 
 def _optimal():
@@ -285,14 +367,15 @@ def _optimal():
     print(data.upper())
     file_name = 'files/data/%s.pkl' % data
     to_file = 'files/results/%s.csv' % data
-    fig_name = 'files/results/%s.png' % data
+    fig_name = 'files/results/figs/%s_topics.png' % data
     optimal_topics(file_name, to_file, fig_name)
 
 
 def _main():
-  keyword = "sus_dev"
-  docs = Document.load('files/data/%s.pkl' % keyword)
-  diversity(docs, 'files/results/figs/%s_diversity.png' % keyword)
+  for data in ['iot', 'sus_dev']:
+    print("## %s" % data)
+    docs = Document.load('files/data/%s.pkl' % data)
+    diversity(docs, data)
   # model, vocabulary = graph.lda()
   # report_lda(model, vocabulary)
 
