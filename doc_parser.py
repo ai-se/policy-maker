@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from collections import OrderedDict
 from sklearn.feature_extraction.text import CountVectorizer, ENGLISH_STOP_WORDS
 from nltk.stem.porter import PorterStemmer
-from utils.lib import O
+from utils.lib import O, median, iqr
 from sklearn.model_selection import train_test_split
 from utils.lda_extended import log_perplexity as perplexity
 import json
@@ -209,10 +209,14 @@ class Graph(O):
     topics = model.ndz_
     for topic, (doc_id, document) in zip(topics, self.document_map.items()):
       document.topic_count = topic
-      sum_t = sum(topic)
-      sum_t = sum_t if sum_t else 0.00001
-      document.topics_score = [t / sum_t for t in topic]
+      document.topics_score = Graph.compute_topic_score(topic)
     return model, self.vectorizer.get_feature_names()
+
+  @staticmethod
+  def compute_topic_score(topic_count):
+    sum_t = sum(topic_count)
+    sum_t = sum_t if sum_t else 0.00001
+    return [t / sum_t for t in topic_count]
 
 
 def report_lda(model, vocabulary, n_terms=10):
@@ -361,6 +365,22 @@ def diversity(documents, fig_name):
   dendo_hm_name = 'files/results/figs/%s_dendo.png' % fig_name
   make_dendo_heatmap(np.transpose(heatmap_arr), row_labels, column_labels,
                      dendo_hm_name, settings_map[fig_name])
+  return graph, model, vocabulary
+
+
+def compute_document_topics(graph, lda_model):
+  documents = graph.document_map.values()
+  vectors = np.array([document.vector for document in documents])
+  topic_counts = lda_model.transform(vectors)
+  topic_deltas = []
+  for topic, document in zip(topic_counts, documents):
+    topic_deltas.append([round(i - j, 2) for i, j in zip(topic, document.topics_score)])
+  print("#### Topic Deltas on Reconstruction")
+  print("```")
+  for i, topic_dist in enumerate(map(list, zip(*topic_deltas))):
+    print("Topic %d ::  Min = %0.2f, Median = %0.2f, Max = %0.2f, IQR = %0.2f" %
+          (i, min(topic_dist), median(topic_dist), max(topic_dist), iqr(topic_dist)))
+  print("```")
 
 
 def _optimal():
@@ -376,7 +396,9 @@ def _main():
   for data in ['iot', 'sus_dev']:
     print("## %s" % data)
     docs = Document.load('files/data/%s.pkl' % data)
-    diversity(docs, data)
+    graph, model, vocabulary = diversity(docs, data)
+    compute_document_topics(graph, model)
+
   # model, vocabulary = graph.lda()
   # report_lda(model, vocabulary)
 
