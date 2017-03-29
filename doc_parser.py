@@ -326,7 +326,8 @@ def make_dendo_heatmap(arr, row_labels, column_labels, figname, settings):
     j.set_visible(False)
   # reorder columns and rows with respect to the clustering
   df_rowclust = df.ix[row_dendr['leaves'][::-1]]
-  df_rowclust.columns = [df_rowclust.columns[col_dendr['leaves']]]
+  # df_rowclust.columns = [df_rowclust.columns[col_dendr['leaves']]]
+  df_rowclust = df_rowclust[col_dendr['leaves']]
   # plot heatmap
   axm = fig.add_axes(settings.plot_axes)
   cax = axm.matshow(df_rowclust, interpolation='nearest', cmap='hot_r')
@@ -397,7 +398,7 @@ def _main():
     print("## %s" % data)
     docs = Document.load('files/data/%s.pkl' % data)
     graph, model, vocabulary = diversity(docs, data)
-    compute_document_topics(graph, model)
+    # compute_document_topics(graph, model)
 
   # model, vocabulary = graph.lda()
   # report_lda(model, vocabulary)
