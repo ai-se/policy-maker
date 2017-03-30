@@ -219,10 +219,25 @@ class Graph(O):
     return [t / sum_t for t in topic_count]
 
 
-def report_lda(model, vocabulary, n_terms=10):
+def report_lda(model, vocabulary, fig_name, n_terms=10, plot_terms=50):
+  fig = plt.figure()
+  x_axis = range(1, plot_terms + 1)
+  legends = []
   for index, topic_dist in enumerate(model.topic_word_):
+    sorted_dist = np.sort(topic_dist)
+    scores = sorted_dist[:-(n_terms + 1):-1]
+    plot_scores = sorted_dist[:-(plot_terms + 1):-1]
+    plt.plot(x_axis, plot_scores)
     topic_words = np.array(vocabulary)[np.argsort(topic_dist)][:-(n_terms + 1):-1]
-    print('Topic {}: {}'.format(index, ', '.join(topic_words)))
+    legends.append("Topic %d" % index)
+    scored_topics = ["%s(%0.3f)" % (t, s) for s, t in zip(scores, topic_words)]
+    print('Topic {}: {}'.format(index, ', '.join(scored_topics)))
+  plt.legend(legends, loc='upper right')
+  plt.title(fig_name)
+  plt.xlabel("Term Index")
+  plt.ylabel("Word Score")
+  plt.savefig("files/results/figs/%s_topic_dist.png" % fig_name)
+  fig.clf()
 
 
 def optimal_topics(file_name, to_file, fig_name):
@@ -343,7 +358,7 @@ def make_dendo_heatmap(arr, row_labels, column_labels, figname, settings):
 def diversity(documents, fig_name):
   graph = Graph(documents)
   model, vocabulary = graph.lda()
-  report_lda(model, vocabulary)
+  report_lda(model, vocabulary, fig_name)
   heatmap_map = {}
   valid_agencies = []
   for agency, documents in graph.agency_map.items():
